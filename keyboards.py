@@ -154,6 +154,23 @@ prime_agents_hub_menu = kb([
     ["⬅️ Назад в админку"],
 ])
 
+
+prime_stats_menu = kb([
+    ["👥 Статистика пользователей", "⚡ Статистика генераций"],
+    ["💎 Статистика подписок", "📈 Статистика лимитов"],
+    ["🎯 Статистика воронок", "📲 Статистика Instagram"],
+    ["📢 Статистика Telegram", "🚨 Ошибки n8n"],
+    ["⬅️ Назад в админку"],
+])
+
+prime_checks_menu = kb([
+    ["🧪 Проверить n8n", "🧪 Проверить OpenRouter"],
+    ["🧪 Проверить Telegram Bot", "🧪 Проверить IG Pipeline"],
+    ["🧪 Проверить Image Generator", "🧪 Проверить Video Generator"],
+    ["🔗 Webhooks n8n", "📜 Логи"],
+    ["⬅️ Назад в админку"],
+])
+
 prime_system_hub_menu = kb([
     ["🧪 Проверить n8n", "🧪 Проверить OpenRouter"],
     ["🧪 Проверить Telegram Bot", "🧪 Проверить IG Pipeline"],

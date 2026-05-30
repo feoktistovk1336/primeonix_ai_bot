@@ -17,6 +17,8 @@ from keyboards import (
     prime_users_menu,
     prime_limits_menu,
     prime_publish_hub_menu,
+    prime_stats_menu,
+    prime_checks_menu,
 )
 
 
@@ -104,13 +106,13 @@ HUBS = {
     ),
     "📈 Статистика": (
         "📈 <b>Статистика</b>\n\n"
-        "Пользователи, генерации, лимиты, подписки, воронки, Instagram, Telegram и ошибки n8n.",
-        prime_system_hub_menu,
+        "Это отдельный раздел с метриками. Выбери, какую статистику посмотреть 👇",
+        prime_stats_menu,
     ),
     "🧪 Проверки": (
         "🧪 <b>Проверки</b>\n\n"
-        "Быстрая диагностика: n8n, OpenRouter, Telegram Bot, Instagram Pipeline.",
-        prime_system_hub_menu,
+        "Это отдельный раздел диагностики связей. Нажимаешь кнопку — проверяем конкретную интеграцию 👇",
+        prime_checks_menu,
     ),
     "⚙️ Система": (
         "⚙️ <b>Система</b>\n\n"
@@ -136,7 +138,7 @@ PRIME_SECTIONS = {
 }
 
 
-@router.message(F.text.in_({"👑 PRIME PANEL", "🚀 PRIME PANEL"}))
+@router.message(F.text.in_({"👑 Админ", "👑 PRIME PANEL", "🚀 PRIME PANEL"}))
 async def open_prime_panel(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         await message.answer("❌ Нет доступа")
@@ -214,6 +216,21 @@ ADMIN_ACTION_TEXTS = {
     "🧪 Проверить Telegram Bot": "Проверка Telegram Bot статуса.",
     "🔗 Webhooks n8n": "Список webhook-переменных Railway/n8n.",
     "📜 Логи": "Логи ошибок и последних запусков.",
+    "🕒 Запланированные": "Раздел запланированных рассылок. Здесь будут будущие рассылки и расписание.",
+    "📜 История рассылок": "История рассылок: дата, сегмент, текст, отправлено, ошибки.",
+    "⚙️ Лимиты FREE": "Настройка лимитов FREE: посты, картинки, rewrite, карусели, Reels.",
+    "⚙️ Лимиты PRO": "Настройка лимитов PRO: расширенные лимиты, воронки, автопостинг, приоритет.",
+    "👥 Статистика пользователей": "Показывает: всего, новые, активные, FREE, PRO, заблокированные.",
+    "⚡ Статистика генераций": "Показывает генерации: посты, картинки, карусели, Reels, лид-магниты.",
+    "💎 Статистика подписок": "Показывает подписки: FREE, Plus, Premium, PRO, истекающие, оплаты.",
+    "📈 Статистика лимитов": "Показывает использование лимитов по тарифам и пользователям.",
+    "🎯 Статистика воронок": "Показывает funnel_id, переходы IG→TG, keyword, выдачи лид-магнитов.",
+    "📲 Статистика Instagram": "Показывает Instagram-материалы, карусели, Reels и ошибки публикаций.",
+    "📢 Статистика Telegram": "Показывает Telegram-посты, лид-магниты, подписчиков и активность.",
+    "🚨 Ошибки n8n": "Показывает ошибки workflow, таймауты, неудачные публикации и повторы.",
+    "🧪 Проверить n8n": "Проверка доступности n8n system webhook.",
+    "🧪 Проверить Image Generator": "Проверка генерации картинок через OpenRouter/image workflow.",
+    "🧪 Проверить Video Generator": "Проверка видео workflow для Reels.",
 }
 
 
@@ -238,14 +255,22 @@ async def admin_action_placeholder(message: Message, state: FSMContext):
 
     section_keyboard = prime_panel_menu
     text_info = ADMIN_ACTION_TEXTS[message.text]
-    if "Telegram" in text_info or "TG" in text_info:
+    if message.text in {"👥 Статистика пользователей", "⚡ Статистика генераций", "💎 Статистика подписок", "📈 Статистика лимитов", "🎯 Статистика воронок", "📲 Статистика Instagram", "📢 Статистика Telegram", "🚨 Ошибки n8n"}:
+        section_keyboard = prime_stats_menu
+    elif message.text in {"🧪 Проверить n8n", "🧪 Проверить OpenRouter", "🧪 Проверить Telegram Bot", "🧪 Проверить IG Pipeline", "🧪 Проверить Image Generator", "🧪 Проверить Video Generator", "🔗 Webhooks n8n", "📜 Логи"}:
+        section_keyboard = prime_checks_menu
+    elif message.text in {"🕒 Запланированные", "📜 История рассылок"}:
+        section_keyboard = prime_broadcast_menu
+    elif "Telegram" in text_info or "TG" in text_info:
         section_keyboard = prime_telegram_hub_menu
     elif "Instagram" in text_info or "IG" in text_info:
         section_keyboard = prime_instagram_hub_menu
     elif "Funnel" in text_info or "funnel" in text_info or "ворон" in text_info.lower():
         section_keyboard = prime_funnel_hub_menu
-    elif "Broadcast" in text_info:
+    elif "Broadcast" in text_info or "рассыл" in text_info.lower():
         section_keyboard = prime_broadcast_menu
+    elif "лимит" in text_info.lower() or "PRO" in message.text:
+        section_keyboard = prime_limits_menu
 
     await message.answer(
         f"✅ <b>{message.text}</b>\n\n"

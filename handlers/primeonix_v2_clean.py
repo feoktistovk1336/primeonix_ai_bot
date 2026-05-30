@@ -94,6 +94,9 @@ ACTION_TITLES = {
     "content_pack": "🚀 Контент-пак",
     "ideas": "💡 Идеи",
     "plan": "📅 Контент-план",
+    "rewrite": "✍️ Rewrite",
+    "brand_voice": "🎭 Brand Voice",
+    "hooks": "🎯 Viral Hooks",
 }
 
 
@@ -266,6 +269,19 @@ async def v2_choose_content(message: Message, state: FSMContext):
 async def v2_generate_content(message: Message, state: FSMContext):
     user_id = message.from_user.id
     prompt = (message.text or "").strip()
+
+    # If user presses another tool/format while a prompt is expected, switch mode instead of treating the button as input.
+    if prompt in ACTION_MAP:
+        action = ACTION_MAP[prompt]
+        await state.update_data(action=action)
+        await state.set_state(V2State.waiting_content_prompt)
+        await message.answer(
+            f"{ACTION_TITLES.get(action, prompt)}\n\n"
+            "Режим переключён. Напиши тему, текст или промпт 👇\n\n"
+            "Цель контента и визуальный стиль берутся из AI Профиля."
+        )
+        return
+
     data = await state.get_data()
     action = data.get("action")
 
