@@ -22,6 +22,17 @@ class Settings(BaseSettings):
     N8N_WEBHOOK_URL: str | None = None
     N8N_WEBHOOK_SECRET: str | None = None
     # Split n8n webhooks. If a specific webhook is empty, bot falls back to N8N_WEBHOOK_URL.
+    # Supports both Railway variable styles:
+    # N8N_TELEGRAM_WEBHOOK and N8N_TELEGRAM_WEBHOOK_URL.
+    N8N_SYSTEM_WEBHOOK: str | None = None
+    N8N_TELEGRAM_WEBHOOK: str | None = None
+    N8N_INSTAGRAM_WEBHOOK: str | None = None
+    N8N_CAROUSEL_WEBHOOK: str | None = None
+    N8N_REELS_WEBHOOK: str | None = None
+    N8N_FUNNEL_WEBHOOK: str | None = None
+    N8N_BROADCAST_WEBHOOK: str | None = None
+    N8N_PRO_WEBHOOK: str | None = None
+
     N8N_SYSTEM_WEBHOOK_URL: str | None = None
     N8N_TELEGRAM_WEBHOOK_URL: str | None = None
     N8N_INSTAGRAM_WEBHOOK_URL: str | None = None
