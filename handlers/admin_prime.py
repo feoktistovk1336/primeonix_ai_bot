@@ -253,6 +253,77 @@ async def admin_action_placeholder(message: Message, state: FSMContext):
         )
         return
 
+    # Real diagnostics must call n8n/Telegram immediately, not show old placeholder text.
+    if message.text == "🧪 Проверить n8n":
+        from services.n8n_client import ping_n8n
+        await message.answer("🧪 Проверяю n8n system webhook...")
+        result = await ping_n8n()
+        if result.get("ok"):
+            await message.answer(
+                "✅ n8n отвечает.\n\n"
+                f"HTTP status: {result.get('status')}\n"
+                f"Ответ: {result.get('text') or result.get('raw')}",
+                reply_markup=prime_checks_menu,
+            )
+        else:
+            await message.answer(
+                "❌ n8n не ответил как надо.\n\n"
+                f"Ошибка: {result.get('error')}\n"
+                f"Детали: {result.get('message') or result.get('raw') or result.get('data')}",
+                reply_markup=prime_checks_menu,
+            )
+        return
+
+    if message.text == "🧪 Проверить Telegram Bot":
+        me = await message.bot.get_me()
+        await message.answer(
+            "✅ Telegram Bot отвечает.\n\n"
+            f"@{me.username}\n"
+            f"ID: {me.id}",
+            reply_markup=prime_checks_menu,
+        )
+        return
+
+    if message.text in {"🧪 Проверить OpenRouter", "🧪 Проверить IG Pipeline", "🧪 Проверить Image Generator", "🧪 Проверить Video Generator"}:
+        from services.n8n_client import call_n8n
+        action_map = {
+            "🧪 Проверить OpenRouter": "check_openrouter",
+            "🧪 Проверить IG Pipeline": "check_instagram_pipeline",
+            "🧪 Проверить Image Generator": "check_image_generator",
+            "🧪 Проверить Video Generator": "check_video_generator",
+        }
+        await message.answer(f"🧪 Отправляю тест: {message.text}...")
+        result = await call_n8n({
+            "action": action_map[message.text],
+            "source": "telegram_bot",
+            "platform": "instagram" if "IG" in message.text else "telegram",
+            "message": "PrimeOnix integration diagnostic test",
+        }, timeout=45)
+        if result.get("ok"):
+            await message.answer(
+                "✅ Проверка прошла.\n\n"
+                f"HTTP status: {result.get('status')}\n"
+                f"Ответ: {result.get('text') or result.get('raw')}",
+                reply_markup=prime_checks_menu,
+            )
+        else:
+            await message.answer(
+                "❌ Проверка не прошла.\n\n"
+                f"Ошибка: {result.get('error')}\n"
+                f"Детали: {result.get('message') or result.get('raw') or result.get('data')}",
+                reply_markup=prime_checks_menu,
+            )
+        return
+
+    if message.text == "🔗 Webhooks n8n":
+        from services.n8n_client import n8n_config_status
+        ok, missing, cfg = n8n_config_status({"action": "ping"})
+        lines = ["🔗 <b>Webhooks n8n</b>", "", f"Статус: {'✅ настроено' if ok else '⚠️ не хватает ' + ', '.join(missing)}", ""]
+        for key, value in cfg.items():
+            lines.append(f"• {key}: {'✅' if value else '❌'}")
+        await message.answer("\n".join(lines), reply_markup=prime_checks_menu, parse_mode="HTML")
+        return
+
     section_keyboard = prime_panel_menu
     text_info = ADMIN_ACTION_TEXTS[message.text]
     if message.text in {"👥 Статистика пользователей", "⚡ Статистика генераций", "💎 Статистика подписок", "📈 Статистика лимитов", "🎯 Статистика воронок", "📲 Статистика Instagram", "📢 Статистика Telegram", "🚨 Ошибки n8n"}:
