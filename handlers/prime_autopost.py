@@ -666,13 +666,13 @@ async def route_publish_action(message: Message):
             "expected_response": {"text": "Pipeline status for Telegram"},
         }, timeout=45)
         if result.get("ok"):
-            await message.answer("✅ IG Pipeline ответил.\n\n" + (result.get("text") or "n8n принял тест."), reply_markup=prime_autopost_menu)
+            await message.answer("✅ IG Pipeline ответил.\n\n" + (result.get("text") or "n8n принял тест."), reply_markup=prime_checks_menu)
         else:
             await message.answer(
                 "❌ IG Pipeline не ответил как надо.\n\n"
                 f"Ошибка: {result.get('error')}\n"
                 f"Детали: {result.get('message') or result.get('raw') or result.get('data')}",
-                reply_markup=prime_autopost_menu,
+                reply_markup=prime_checks_menu,
             )
         return
 

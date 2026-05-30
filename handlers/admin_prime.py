@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
 from handlers.admin import is_admin
 from keyboards import (
@@ -23,6 +24,11 @@ from keyboards import (
 
 
 router = Router()
+
+
+class AdminPrimeN8NState(StatesGroup):
+    waiting_task_prompt = State()
+
 
 
 PRIME_PANEL_TEXT = (
@@ -183,6 +189,34 @@ async def prime_panel_section(message: Message, state: FSMContext):
     await message.answer(PRIME_SECTIONS[message.text], reply_markup=prime_system_hub_menu, parse_mode="HTML")
 
 
+N8N_ADMIN_TASKS = {
+    "📢 Telegram пост": {"action": "telegram_post", "platform": "telegram", "workflow": "telegram", "content_type": "post", "keyboard": "telegram", "title": "📢 Telegram пост"},
+    "🖼 TG пост + картинка": {"action": "telegram_post_image", "platform": "telegram", "workflow": "telegram", "content_type": "post_image", "keyboard": "telegram", "title": "🖼 TG пост + картинка"},
+    "📚 Серия постов": {"action": "telegram_series", "platform": "telegram", "workflow": "telegram", "content_type": "series", "keyboard": "telegram", "title": "📚 Серия постов"},
+    "🎁 Лид-магниты TG": {"action": "telegram_lead_magnet", "platform": "telegram", "workflow": "telegram", "content_type": "lead_magnet", "keyboard": "telegram", "title": "🎁 Лид-магнит TG"},
+    "🚀 Прогрев TG": {"action": "telegram_warmup", "platform": "telegram", "workflow": "telegram", "content_type": "warmup", "keyboard": "telegram", "title": "🚀 Прогрев TG"},
+    "🚀 Автопостинг TG": {"action": "telegram_autopost", "platform": "telegram", "workflow": "telegram", "content_type": "autopost", "keyboard": "telegram", "title": "🚀 Автопостинг TG"},
+    "📷 Instagram пост": {"action": "instagram_post", "platform": "instagram", "workflow": "instagram", "content_type": "post", "keyboard": "instagram", "title": "📷 Instagram пост"},
+    "🎠 Instagram карусель": {"action": "instagram_carousel", "platform": "instagram", "workflow": "carousel", "content_type": "carousel", "keyboard": "instagram", "title": "🎠 Instagram карусель"},
+    "🎬 Instagram Reels": {"action": "instagram_reels", "platform": "instagram", "workflow": "reels", "content_type": "reels", "keyboard": "instagram", "title": "🎬 Instagram Reels"},
+    "📅 Контент-план": {"action": "content_plan", "platform": "telegram", "workflow": "telegram", "content_type": "content_plan", "keyboard": "content", "title": "📅 Контент-план"},
+    "🎬 Reels → Telegram": {"action": "funnel_reels_to_telegram", "platform": "ig_tg", "workflow": "funnel", "content_type": "reels_to_telegram", "keyboard": "funnel", "title": "🎬 Reels → Telegram"},
+    "🎠 Карусель → Telegram": {"action": "funnel_carousel_to_telegram", "platform": "ig_tg", "workflow": "funnel", "content_type": "carousel_to_telegram", "keyboard": "funnel", "title": "🎠 Карусель → Telegram"},
+    "📷 Пост → Telegram": {"action": "funnel_post_to_telegram", "platform": "ig_tg", "workflow": "funnel", "content_type": "post_to_telegram", "keyboard": "funnel", "title": "📷 Пост → Telegram"},
+    "🎁 Лид-магнит → Telegram": {"action": "funnel_lead_magnet_to_telegram", "platform": "ig_tg", "workflow": "funnel", "content_type": "lead_magnet_to_telegram", "keyboard": "funnel", "title": "🎁 Лид-магнит → Telegram"},
+    "📨 DM Funnel": {"action": "dm_funnel", "platform": "ig_tg", "workflow": "funnel", "content_type": "dm_funnel", "keyboard": "funnel", "title": "📨 DM Funnel"},
+}
+
+
+def _keyboard_by_key(key: str):
+    return {
+        "telegram": prime_telegram_hub_menu,
+        "instagram": prime_instagram_hub_menu,
+        "funnel": prime_funnel_hub_menu,
+        "content": prime_content_hub_menu,
+    }.get(key, prime_panel_menu)
+
+
 ADMIN_ACTION_TEXTS = {
     "📢 Telegram пост": "WF Telegram Post: текст для Telegram.",
     "🖼 TG пост + картинка": "WF Telegram Post + Image: текст + картинка для Telegram.",
@@ -241,6 +275,18 @@ async def admin_action_placeholder(message: Message, state: FSMContext):
         return
 
     await state.clear()
+
+    if message.text in N8N_ADMIN_TASKS:
+        task = N8N_ADMIN_TASKS[message.text]
+        await state.update_data(admin_n8n_task=task)
+        await state.set_state(AdminPrimeN8NState.waiting_task_prompt)
+        await message.answer(
+            f"{task['title']}\n\n"
+            "Напиши тему, нишу, продукт или задачу 👇\n\n"
+            "Я отправлю это в нужный n8n workflow и верну готовый пакет.",
+            reply_markup=_keyboard_by_key(task.get('keyboard', '')),
+        )
+        return
 
     if message.text in {"📬 Новая рассылка", "📣 Рассылка всем", "💎 Рассылка PRO", "🆓 Рассылка FREE", "🎯 Рассылка по сегменту"}:
         from handlers.admin import AdminState
@@ -346,10 +392,89 @@ async def admin_action_placeholder(message: Message, state: FSMContext):
     await message.answer(
         f"✅ <b>{message.text}</b>\n\n"
         f"{text_info}\n\n"
-        "Маршрут подготовлен. Когда вставим рабочий n8n webhook, эта кнопка будет запускать отдельный workflow.",
+        "Раздел открыт. Если это действие должно запускать n8n — выбери нужную кнопку и отправь тему/задачу.",
         reply_markup=section_keyboard,
         parse_mode="HTML",
     )
+
+
+@router.message(AdminPrimeN8NState.waiting_task_prompt)
+async def admin_prime_run_n8n_task(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ Нет доступа")
+        await state.clear()
+        return
+
+    text = (message.text or "").strip()
+
+    # If admin presses another admin task while waiting, switch mode instead of treating the button as prompt.
+    if text in N8N_ADMIN_TASKS:
+        task = N8N_ADMIN_TASKS[text]
+        await state.update_data(admin_n8n_task=task)
+        await state.set_state(AdminPrimeN8NState.waiting_task_prompt)
+        await message.answer(
+            f"{task['title']}\n\n"
+            "Режим переключён. Напиши тему, нишу, продукт или задачу 👇",
+            reply_markup=_keyboard_by_key(task.get('keyboard', '')),
+        )
+        return
+
+    # Navigation buttons should work normally from this waiting state.
+    if text in HUBS:
+        await state.clear()
+        hub_text, hub_keyboard = HUBS[text]
+        await message.answer(hub_text, reply_markup=hub_keyboard, parse_mode="HTML")
+        return
+    if text in {"⬅️ Назад в админку", "⬅️ Назад в PRIME PANEL", "❌ Отмена"}:
+        await state.clear()
+        await message.answer(PRIME_PANEL_TEXT, reply_markup=prime_panel_menu, parse_mode="HTML")
+        return
+
+    if not text:
+        await message.answer("Напиши тему или задачу текстом.")
+        return
+
+    data = await state.get_data()
+    task = data.get("admin_n8n_task") or {}
+    if not task:
+        await state.clear()
+        await message.answer("⚠️ Режим потерян. Выбери действие заново.", reply_markup=prime_panel_menu)
+        return
+
+    from services.n8n_client import call_n8n
+
+    await message.answer(f"🚀 Отправляю в n8n: {task.get('title', 'задача')}...")
+    result = await call_n8n({
+        "action": task.get("action"),
+        "workflow": task.get("workflow"),
+        "platform": task.get("platform"),
+        "content_type": task.get("content_type"),
+        "source": "telegram_bot_admin",
+        "user_id": message.from_user.id,
+        "username": message.from_user.username,
+        "topic": text,
+        "prompt": text,
+        "message": text,
+        "expected_response": {"text": "Human-readable generated package for Telegram"},
+    }, timeout=120)
+
+    await state.clear()
+    keyboard = _keyboard_by_key(task.get("keyboard", ""))
+    if result.get("ok"):
+        answer = result.get("text") or result.get("raw") or "n8n принял задачу и вернул пустой ответ."
+        await message.answer(
+            f"✅ {task.get('title', 'Задача')} готово.\n\n"
+            f"HTTP status: {result.get('status')}\n\n"
+            f"{answer}",
+            reply_markup=keyboard,
+        )
+    else:
+        await message.answer(
+            f"❌ n8n не обработал: {task.get('title', 'задача')}\n\n"
+            f"Ошибка: {result.get('error')}\n"
+            f"Детали: {result.get('message') or result.get('raw') or result.get('data')}",
+            reply_markup=keyboard,
+        )
 
 
 @router.message(F.text == "⬅️ Назад в админку")
